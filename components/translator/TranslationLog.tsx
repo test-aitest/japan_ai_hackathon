@@ -3,12 +3,22 @@
 import { LogItem } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2 } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 type TranslationLogProps = {
   logs: LogItem[];
 };
 
 export function TranslationLog({ logs }: TranslationLogProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [logs]);
+
   if (logs.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
@@ -18,7 +28,7 @@ export function TranslationLog({ logs }: TranslationLogProps) {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6">
+    <div ref={scrollContainerRef} className="h-full overflow-y-auto p-6">
       <AnimatePresence initial={false}>
         {logs.map((log) => (
           <motion.div
@@ -59,6 +69,7 @@ export function TranslationLog({ logs }: TranslationLogProps) {
           </motion.div>
         ))}
       </AnimatePresence>
+      <div ref={bottomRef} />
     </div>
   );
 }
