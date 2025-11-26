@@ -4,12 +4,45 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { LogItem, SessionStatus, LanguagePair } from "@/lib/types";
 import { translateText } from "@/app/actions/translate";
 import { getLanguageByCode } from "@/lib/languages";
+import { getKeywordsForLanguagePair, applyKeywords } from "@/lib/keywordStorage";
 
-// Extend Window interface for SpeechRecognition
+// Simple type definitions for Web Speech API
+type SpeechRecognitionResultEvent = {
+  resultIndex: number;
+  results: {
+    length: number;
+    [key: number]: {
+      isFinal: boolean;
+      [key: number]: { transcript: string };
+    };
+  };
+};
+
+type SpeechRecognitionErrorEvent = {
+  error: string;
+};
+
+type SpeechRecognitionType = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  onresult: (event: SpeechRecognitionResultEvent) => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
+  onstart: () => void;
+  onend: () => void;
+  start: () => void;
+  stop: () => void;
+};
+
 declare global {
   interface Window {
-    SpeechRecognition: any;
-    webkitSpeechRecognition: any;
+    SpeechRecognition: {
+      new (): SpeechRecognitionType;
+    };
+    webkitSpeechRecognition: {
+      new (): SpeechRecognitionType;
+    };
   }
 }
 
@@ -18,7 +51,7 @@ export function useTranslationSession(languages: LanguagePair) {
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [isRecording, setIsRecording] = useState(false);
 
-  const recognitionRef = useRef<any | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionType | null>(null);
   const isRecordingRef = useRef<boolean>(false);
   const currentTranscriptRef = useRef<string>("");
   const currentLogIdRef = useRef<string | null>(null);
@@ -33,7 +66,9 @@ export function useTranslationSession(languages: LanguagePair) {
         window.SpeechRecognition || window.webkitSpeechRecognition;
 
       if (!SpeechRecognition) {
-        throw new Error("Speech recognition is not supported in this browser. Please try Chrome, Edge, or Safari.");
+        throw new Error(
+          "Speech recognition is not supported in this browser. Please try Chrome, Edge, or Safari."
+        );
       }
 
       const sourceLang = getLanguageByCode(languages.source);
@@ -52,7 +87,7 @@ export function useTranslationSession(languages: LanguagePair) {
       recognition.maxAlternatives = 1;
 
       // Handle results
-      recognition.onresult = async (event: any) => {
+      recognition.onresult = async (event: SpeechRecognitionResultEvent) => {
         let interimTranscript = "";
         let finalTranscript = "";
 
@@ -64,6 +99,14 @@ export function useTranslationSession(languages: LanguagePair) {
           } else {
             interimTranscript += transcript;
           }
+        }
+
+        // Apply custom keywords to recognized text
+        if (interimTranscript) {
+          interimTranscript = applyKeywords(interimTranscript, languages.source, languages.target);
+        }
+        if (finalTranscript) {
+          finalTranscript = applyKeywords(finalTranscript, languages.source, languages.target);
         }
 
         // Handle interim results (partial transcript)
@@ -120,31 +163,44 @@ export function useTranslationSession(languages: LanguagePair) {
               setStatus("translating");
               const targetLang = getLanguageByCode(languages.target);
 
+              // Get custom keywords for this language pair
+              const keywords = getKeywordsForLanguagePair(
+                languages.source,
+                languages.target
+              );
+
               translateText(
                 finalText,
                 sourceLang.translationName,
-                targetLang?.translationName || languages.target
-              ).then(({ translatedText }) => {
-                // Update log with translation
-                setLogs((prev) =>
-                  prev.map((log) =>
-                    log.id === logIdToUpdate
-                      ? { ...log, translated: translatedText, isFinal: true }
-                      : log
-                  )
-                );
-                setStatus("listening");
-              }).catch((error) => {
-                console.error("Translation error:", error);
-                setLogs((prev) =>
-                  prev.map((log) =>
-                    log.id === logIdToUpdate
-                      ? { ...log, translated: "[Translation Error]", isFinal: true }
-                      : log
-                  )
-                );
-                setStatus("listening");
-              });
+                targetLang?.translationName || languages.target,
+                keywords
+              )
+                .then(({ translatedText }) => {
+                  // Update log with translation
+                  setLogs((prev) =>
+                    prev.map((log) =>
+                      log.id === logIdToUpdate
+                        ? { ...log, translated: translatedText, isFinal: true }
+                        : log
+                    )
+                  );
+                  setStatus("listening");
+                })
+                .catch((error) => {
+                  console.error("Translation error:", error);
+                  setLogs((prev) =>
+                    prev.map((log) =>
+                      log.id === logIdToUpdate
+                        ? {
+                            ...log,
+                            translated: "[Translation Error]",
+                            isFinal: true,
+                          }
+                        : log
+                    )
+                  );
+                  setStatus("listening");
+                });
             }
           }
         }
@@ -156,7 +212,7 @@ export function useTranslationSession(languages: LanguagePair) {
         isRecordingRef.current = true;
       };
 
-      recognition.onerror = (event: any) => {
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error("Speech recognition error:", event.error);
 
         if (event.error === "no-speech") {
@@ -168,7 +224,9 @@ export function useTranslationSession(languages: LanguagePair) {
           setStatus("error");
           setIsRecording(false);
           isRecordingRef.current = false;
-          alert("Microphone access was denied. Please allow microphone access in your browser settings.");
+          alert(
+            "Microphone access was denied. Please allow microphone access in your browser settings."
+          );
         } else {
           setStatus("error");
         }
@@ -191,7 +249,6 @@ export function useTranslationSession(languages: LanguagePair) {
 
       // Start recognition
       recognition.start();
-
     } catch (error) {
       console.error("Failed to start recording:", error);
       setStatus("error");

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { LanguageSelector } from "@/components/translator/LanguageSelector";
 import { TranslationLog } from "@/components/translator/TranslationLog";
 import { RecordingButton } from "@/components/translator/RecordingButton";
+import { KeywordSettings } from "@/components/translator/KeywordSettings";
 import { useTranslationSession } from "@/app/hooks/useTranslationSession";
 import { RotateCcw } from "lucide-react";
 
@@ -42,6 +43,7 @@ export default function Home() {
                 disabled={isRecording}
               />
             </Card>
+            <KeywordSettings />
             <Button
               variant="ghost"
               size="icon"

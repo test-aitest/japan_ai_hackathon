@@ -21,3 +21,14 @@ export type LanguagePair = {
   source: string;
   target: string;
 };
+
+/**
+ * Custom keyword for translation
+ */
+export type Keyword = {
+  id: string;
+  term: string; // 元の用語
+  translation: string; // 翻訳
+  sourceLang: string; // 元言語コード
+  targetLang: string; // 翻訳先言語コード
+};

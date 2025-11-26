@@ -1,12 +1,15 @@
 "use server";
 
+import { Keyword } from "@/lib/types";
+
 /**
  * Translate text using OpenAI API
  */
 export async function translateText(
   text: string,
   sourceLang: string,
-  targetLang: string
+  targetLang: string,
+  keywords?: Keyword[]
 ): Promise<{ translatedText: string }> {
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -18,7 +21,15 @@ export async function translateText(
     return { translatedText: "" };
   }
 
-  const systemPrompt = `Translate the following text from ${sourceLang} to ${targetLang}. Output ONLY the translated text, without any explanations or additional comments.`;
+  let systemPrompt = `Translate the following text from ${sourceLang} to ${targetLang}. Output ONLY the translated text, without any explanations or additional comments.`;
+
+  // Add custom keywords to the prompt if provided
+  if (keywords && keywords.length > 0) {
+    const keywordList = keywords
+      .map((k) => `- "${k.term}" should be translated as "${k.translation}"`)
+      .join("\n");
+    systemPrompt += `\n\nIMPORTANT: Use these custom translations for specific terms:\n${keywordList}`;
+  }
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
