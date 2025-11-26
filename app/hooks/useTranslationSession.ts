@@ -2,9 +2,11 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { LogItem, SessionStatus, LanguagePair } from "@/lib/types";
-import { translateText } from "@/app/actions/translate";
 import { getLanguageByCode } from "@/lib/languages";
-import { getKeywordsForLanguagePair, applyKeywords } from "@/lib/keywordStorage";
+import {
+  getKeywordsForLanguagePair,
+  applyKeywords,
+} from "@/lib/keywordStorage";
 
 // Simple type definitions for Web Speech API
 type SpeechRecognitionResultEvent = {
@@ -55,6 +57,123 @@ export function useTranslationSession(languages: LanguagePair) {
   const isRecordingRef = useRef<boolean>(false);
   const currentTranscriptRef = useRef<string>("");
   const currentLogIdRef = useRef<string | null>(null);
+  const translationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Start streaming translation
+  const startTranslation = useCallback(
+    async (text: string, logId: string) => {
+      // Cancel existing translation
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      const sourceLang = getLanguageByCode(languages.source);
+      const targetLang = getLanguageByCode(languages.target);
+
+      if (!sourceLang || !targetLang) return;
+
+      // Get custom keywords for this language pair
+      const keywords = getKeywordsForLanguagePair(
+        languages.source,
+        languages.target
+      );
+
+      console.log("[Client] Starting streaming translation for:", text);
+      setStatus("translating");
+
+      // Create new abort controller for this request
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
+      try {
+        const response = await fetch("/api/translate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text,
+            sourceLang: sourceLang.translationName,
+            targetLang: targetLang.translationName,
+            keywords,
+          }),
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Translation failed: ${response.statusText}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error("No response body");
+        }
+
+        const decoder = new TextDecoder();
+        let translatedText = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]") continue;
+
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) {
+                  translatedText += content;
+                  console.log("[Client] Received chunk:", content);
+                  // Update log with incremental translation
+                  setLogs((prev) =>
+                    prev.map((log) =>
+                      log.id === logId
+                        ? { ...log, translated: translatedText }
+                        : log
+                    )
+                  );
+                }
+              } catch {
+                // Skip invalid JSON
+              }
+            }
+          }
+        }
+
+        console.log("[Client] Streaming translation complete:", translatedText);
+
+        // Mark as final
+        setLogs((prev) =>
+          prev.map((log) =>
+            log.id === logId ? { ...log, isFinal: true } : log
+          )
+        );
+        setStatus("listening");
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === "AbortError") {
+          console.log("[Client] Translation aborted");
+          return;
+        }
+        console.error("[Client] Translation error:", error);
+        setLogs((prev) =>
+          prev.map((log) =>
+            log.id === logId
+              ? { ...log, translated: "[Translation Error]", isFinal: true }
+              : log
+          )
+        );
+        setStatus("listening");
+      }
+    },
+    [languages]
+  );
 
   // Start recording session
   const startRecording = useCallback(async () => {
@@ -103,10 +222,10 @@ export function useTranslationSession(languages: LanguagePair) {
 
         // Apply custom keywords to recognized text
         if (interimTranscript) {
-          interimTranscript = applyKeywords(interimTranscript, languages.source, languages.target);
+          interimTranscript = applyKeywords(interimTranscript);
         }
         if (finalTranscript) {
-          finalTranscript = applyKeywords(finalTranscript, languages.source, languages.target);
+          finalTranscript = applyKeywords(finalTranscript);
         }
 
         // Handle interim results (partial transcript)
@@ -135,6 +254,18 @@ export function useTranslationSession(languages: LanguagePair) {
             };
             setLogs((prev) => [...prev, newLog]);
           }
+
+          // Start translation with debounce (300ms)
+          if (translationTimerRef.current) {
+            clearTimeout(translationTimerRef.current);
+          }
+
+          const logId = currentLogIdRef.current;
+          translationTimerRef.current = setTimeout(() => {
+            if (logId) {
+              startTranslation(interimTranscript, logId);
+            }
+          }, 300);
         }
 
         // Handle final results
@@ -142,6 +273,12 @@ export function useTranslationSession(languages: LanguagePair) {
           const finalText = finalTranscript.trim();
 
           if (finalText) {
+            // Clear debounce timer
+            if (translationTimerRef.current) {
+              clearTimeout(translationTimerRef.current);
+              translationTimerRef.current = null;
+            }
+
             // Save the current log ID before it changes
             const logIdToUpdate = currentLogIdRef.current;
 
@@ -155,52 +292,12 @@ export function useTranslationSession(languages: LanguagePair) {
                 )
               );
 
+              // Start final translation immediately
+              startTranslation(finalText, logIdToUpdate);
+
               // Reset current transcript for next input
               currentTranscriptRef.current = "";
               currentLogIdRef.current = null;
-
-              // Translate the final text (async operation)
-              setStatus("translating");
-              const targetLang = getLanguageByCode(languages.target);
-
-              // Get custom keywords for this language pair
-              const keywords = getKeywordsForLanguagePair(
-                languages.source,
-                languages.target
-              );
-
-              translateText(
-                finalText,
-                sourceLang.translationName,
-                targetLang?.translationName || languages.target,
-                keywords
-              )
-                .then(({ translatedText }) => {
-                  // Update log with translation
-                  setLogs((prev) =>
-                    prev.map((log) =>
-                      log.id === logIdToUpdate
-                        ? { ...log, translated: translatedText, isFinal: true }
-                        : log
-                    )
-                  );
-                  setStatus("listening");
-                })
-                .catch((error) => {
-                  console.error("Translation error:", error);
-                  setLogs((prev) =>
-                    prev.map((log) =>
-                      log.id === logIdToUpdate
-                        ? {
-                            ...log,
-                            translated: "[Translation Error]",
-                            isFinal: true,
-                          }
-                        : log
-                    )
-                  );
-                  setStatus("listening");
-                });
             }
           }
         }
@@ -258,7 +355,7 @@ export function useTranslationSession(languages: LanguagePair) {
         alert(error.message);
       }
     }
-  }, [languages]);
+  }, [languages.source, startTranslation]);
 
   // Stop recording session
   const stopRecording = useCallback(() => {
@@ -267,6 +364,18 @@ export function useTranslationSession(languages: LanguagePair) {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
+    }
+
+    // Clear debounce timer
+    if (translationTimerRef.current) {
+      clearTimeout(translationTimerRef.current);
+      translationTimerRef.current = null;
+    }
+
+    // Cancel ongoing translation
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
 
     currentTranscriptRef.current = "";
@@ -296,6 +405,12 @@ export function useTranslationSession(languages: LanguagePair) {
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
+      }
+      if (translationTimerRef.current) {
+        clearTimeout(translationTimerRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
     };
   }, []);

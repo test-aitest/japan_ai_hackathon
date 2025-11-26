@@ -74,23 +74,31 @@ export function getKeywordsForLanguagePair(
 ): Keyword[] {
   const keywords = getKeywords();
   return keywords.filter(
-    (k) => k.sourceLang === sourceLang && k.targetLang === targetLang
+    (k) =>
+      // Match exact language pair OR universal keywords (marked with "*")
+      (k.sourceLang === sourceLang && k.targetLang === targetLang) ||
+      (k.sourceLang === "*" && k.targetLang === "*")
   );
 }
 
 /**
- * Apply keywords to text (replace terms with translations)
+ * Get all keywords regardless of language
  */
-export function applyKeywords(
-  text: string,
-  sourceLang: string,
-  targetLang: string
-): string {
-  const keywords = getKeywordsForLanguagePair(sourceLang, targetLang);
+export function getAllKeywords(): Keyword[] {
+  return getKeywords();
+}
+
+/**
+ * Apply keywords to text (replace terms with translations)
+ * Applies ALL keywords regardless of language
+ */
+export function applyKeywords(text: string): string {
+  // Get all keywords (including universal ones)
+  const allKeywords = getKeywords();
   let result = text;
 
   // Sort by term length (longest first) to handle overlapping terms
-  const sortedKeywords = keywords.sort((a, b) => b.term.length - a.term.length);
+  const sortedKeywords = allKeywords.sort((a, b) => b.term.length - a.term.length);
 
   for (const keyword of sortedKeywords) {
     // Create a case-insensitive regex with word boundaries
