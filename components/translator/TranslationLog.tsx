@@ -1,7 +1,5 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { LogItem } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2 } from "lucide-react";
@@ -13,7 +11,7 @@ type TranslationLogProps = {
 export function TranslationLog({ logs }: TranslationLogProps) {
   if (logs.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full min-h-[400px] text-sm text-muted-foreground">
+      <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
         <p>Translations will appear here</p>
       </div>
     );

@@ -26,9 +26,9 @@ export function LanguageSelector({
   disabled = false,
 }: LanguageSelectorProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-end">
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">
           From
         </label>
         <Select
@@ -36,7 +36,7 @@ export function LanguageSelector({
           onValueChange={onSourceChange}
           disabled={disabled}
         >
-          <SelectTrigger className="h-10">
+          <SelectTrigger className="h-9 w-32">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -49,12 +49,10 @@ export function LanguageSelector({
         </Select>
       </div>
 
-      <div className="hidden md:block pb-1">
-        <ArrowRight className="w-5 h-5 text-muted-foreground" />
-      </div>
+      <ArrowRight className="w-4 h-4 text-muted-foreground" />
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">
           To
         </label>
         <Select
@@ -62,7 +60,7 @@ export function LanguageSelector({
           onValueChange={onTargetChange}
           disabled={disabled}
         >
-          <SelectTrigger className="h-10">
+          <SelectTrigger className="h-9 w-32">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
