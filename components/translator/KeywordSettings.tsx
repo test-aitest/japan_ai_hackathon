@@ -63,7 +63,9 @@ export function KeywordSettings() {
     setKeywords(keywords.filter((k) => k.id !== id));
   };
 
-  const handleImportFromConference = (importedKeywords: Omit<Keyword, "id">[]) => {
+  const handleImportFromConference = (
+    importedKeywords: Omit<Keyword, "id">[]
+  ) => {
     const newKeywords = importedKeywords.map((kw) => addKeyword(kw));
     setKeywords([...keywords, ...newKeywords]);
   };
@@ -79,26 +81,24 @@ export function KeywordSettings() {
         <DialogHeader>
           <DialogTitle>Custom Keywords</DialogTitle>
           <DialogDescription>
-            Automatically replace recognized terms with different words. Useful for technical jargon and abbreviations.
+            Automatically replace recognized terms with different words. Useful
+            for technical jargon and abbreviations.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
-          {/* Tab Navigation */}
           <Tabs defaultValue="conference" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="conference">Import from Conference</TabsTrigger>
+              <TabsTrigger value="conference">
+                Import from Conference
+              </TabsTrigger>
               <TabsTrigger value="manual">Add Manually</TabsTrigger>
             </TabsList>
 
-            {/* Conference Import Tab */}
             <TabsContent value="conference" className="mt-4">
-              <ConferenceImport
-                onImport={handleImportFromConference}
-              />
+              <ConferenceImport onImport={handleImportFromConference} />
             </TabsContent>
 
-            {/* Manual Add Tab */}
             <TabsContent value="manual" className="mt-4">
               <Card className="p-4">
                 <h3 className="text-sm font-medium mb-3">Add Manually</h3>
@@ -115,7 +115,9 @@ export function KeywordSettings() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs text-muted-foreground">Replace With</label>
+                      <label className="text-xs text-muted-foreground">
+                        Replace With
+                      </label>
                       <Input
                         placeholder="e.g., Artificial Intelligence"
                         value={newTranslation}
@@ -165,7 +167,6 @@ export function KeywordSettings() {
             </TabsContent>
           </Tabs>
 
-          {/* Keyword list */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium">Registered Keywords</h3>
             {keywords.length === 0 ? (
@@ -178,22 +179,25 @@ export function KeywordSettings() {
                   const lang = SUPPORTED_LANGUAGES.find(
                     (l) => l.code === keyword.sourceLang
                   );
-                  const displayLang = keyword.sourceLang === "*" ? "All Languages" : lang?.name;
+                  const displayLang =
+                    keyword.sourceLang === "*" ? "All Languages" : lang?.name;
 
                   return (
                     <Card key={keyword.id} className="p-3">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           {keyword.sourceLang === "*" ? (
-                            // Universal keyword - show only the term
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">{keyword.term}</span>
+                              <span className="font-medium">
+                                {keyword.term}
+                              </span>
                             </div>
                           ) : (
-                            // Language-specific keyword - show term → translation and language
                             <>
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium">{keyword.term}</span>
+                                <span className="font-medium">
+                                  {keyword.term}
+                                </span>
                                 <span className="text-muted-foreground">→</span>
                                 <span className="font-medium">
                                   {keyword.translation}

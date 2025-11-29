@@ -5,12 +5,9 @@ import { Keyword } from "@/lib/types";
 type ExtractedKeyword = {
   term: string;
   translation: string;
-  category: string; // "speaker", "company", "product", "keyword", "technical"
+  category: string;
 };
 
-/**
- * Extract keywords from a conference website URL
- */
 export async function extractKeywordsFromURL(
   url: string,
   sourceLang: string,
@@ -23,7 +20,6 @@ export async function extractKeywordsFromURL(
   }
 
   try {
-    // Fetch the website content
     const response = await fetch(url);
     if (!response.ok) {
       return {
@@ -34,36 +30,25 @@ export async function extractKeywordsFromURL(
 
     const html = await response.text();
 
-    // Clean HTML and extract text - improved approach
     let text = html
-      // Remove script and style tags with their content
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      // Remove HTML comments
       .replace(/<!--[\s\S]*?-->/g, "")
-      // Remove all HTML tags
       .replace(/<[^>]+>/g, " ")
-      // Decode common HTML entities
       .replace(/&nbsp;/g, " ")
       .replace(/&amp;/g, "&")
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">")
       .replace(/&quot;/g, '"')
-      // Normalize whitespace
       .replace(/\s+/g, " ")
       .trim();
 
-    // Take more content for better extraction
-    text = text.substring(0, 20000); // Increased from 15000
+    text = text.substring(0, 20000);
 
     if (!text.trim()) {
       return { keywords: [], error: "No text content found on the page" };
     }
 
-    console.log("Extracted text length:", text.length);
-    console.log("Text preview:", text.substring(0, 500));
-
-    // Extract keywords using OpenAI
     const extractionPrompt = `Analyze the following conference website content and extract important proper nouns and technical terms.
 
 Extract ALL of the following:
@@ -129,8 +114,6 @@ ${text}`;
     const data = await aiResponse.json();
     const content = data.choices?.[0]?.message?.content;
 
-    console.log("AI response content:", content);
-
     if (!content) {
       return { keywords: [], error: "No content received from AI" };
     }
@@ -140,7 +123,6 @@ ${text}`;
       const parsed = JSON.parse(content);
       console.log("Parsed JSON:", parsed);
 
-      // Handle both array format and object with array property
       extractedKeywords = Array.isArray(parsed)
         ? parsed
         : parsed.keywords || [];
@@ -156,7 +138,6 @@ ${text}`;
       return { keywords: [], error: "No keywords found in the content" };
     }
 
-    // Convert to Keyword format
     const keywords: Omit<Keyword, "id">[] = extractedKeywords.map((kw) => ({
       term: kw.term,
       translation: kw.translation,

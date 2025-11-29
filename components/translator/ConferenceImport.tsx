@@ -15,7 +15,9 @@ type ConferenceImportProps = {
 export function ConferenceImport({ onImport }: ConferenceImportProps) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
-  const [extractedKeywords, setExtractedKeywords] = useState<Omit<Keyword, "id">[]>([]);
+  const [extractedKeywords, setExtractedKeywords] = useState<
+    Omit<Keyword, "id">[]
+  >([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -51,19 +53,21 @@ export function ConferenceImport({ onImport }: ConferenceImportProps) {
     setExtractedKeywords([]);
     setUrl("");
 
-    // Reset success message after 3 seconds
     setTimeout(() => setSuccess(false), 3000);
   };
 
   return (
     <Card className="p-4">
-      <h3 className="text-sm font-medium mb-3">Auto-Extract from Conference Site</h3>
+      <h3 className="text-sm font-medium mb-3">
+        Auto-Extract from Conference Site
+      </h3>
       <p className="text-xs text-muted-foreground mb-3">
-        Enter a conference website URL to automatically extract proper nouns and technical terms. These keywords will be applied to all languages automatically.
+        Enter a conference website URL to automatically extract proper nouns and
+        technical terms. These keywords will be applied to all languages
+        automatically.
       </p>
 
       <div className="space-y-3">
-        {/* URL Input */}
         <div className="flex gap-2">
           <div className="flex-1 relative">
             <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -91,7 +95,6 @@ export function ConferenceImport({ onImport }: ConferenceImportProps) {
           </Button>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
             <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
@@ -99,7 +102,6 @@ export function ConferenceImport({ onImport }: ConferenceImportProps) {
           </div>
         )}
 
-        {/* Success Message */}
         {success && (
           <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
             <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
@@ -109,7 +111,6 @@ export function ConferenceImport({ onImport }: ConferenceImportProps) {
           </div>
         )}
 
-        {/* Extracted Keywords Preview */}
         {extractedKeywords.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">

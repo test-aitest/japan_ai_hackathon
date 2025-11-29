@@ -8,7 +8,6 @@ import {
   applyKeywords,
 } from "@/lib/keywordStorage";
 
-// Simple type definitions for Web Speech API
 type SpeechRecognitionResultEvent = {
   resultIndex: number;
   results: {
@@ -60,10 +59,8 @@ export function useTranslationSession(languages: LanguagePair) {
   const translationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Start streaming translation
   const startTranslation = useCallback(
     async (text: string, logId: string) => {
-      // Cancel existing translation
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -73,16 +70,13 @@ export function useTranslationSession(languages: LanguagePair) {
 
       if (!sourceLang || !targetLang) return;
 
-      // Get custom keywords for this language pair
       const keywords = getKeywordsForLanguagePair(
         languages.source,
         languages.target
       );
 
-      console.log("[Client] Starting streaming translation for:", text);
       setStatus("translating");
 
-      // Create new abort controller for this request
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
@@ -130,8 +124,6 @@ export function useTranslationSession(languages: LanguagePair) {
                 const content = parsed.choices?.[0]?.delta?.content;
                 if (content) {
                   translatedText += content;
-                  console.log("[Client] Received chunk:", content);
-                  // Update log with incremental translation
                   setLogs((prev) =>
                     prev.map((log) =>
                       log.id === logId
@@ -146,8 +138,6 @@ export function useTranslationSession(languages: LanguagePair) {
             }
           }
         }
-
-        console.log("[Client] Streaming translation complete:", translatedText);
 
         setStatus("listening");
       } catch (error: unknown) {
@@ -169,12 +159,10 @@ export function useTranslationSession(languages: LanguagePair) {
     [languages]
   );
 
-  // Start recording session
   const startRecording = useCallback(async () => {
     try {
       setStatus("connecting");
 
-      // Check if browser supports Speech Recognition
       const SpeechRecognition =
         window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -189,19 +177,15 @@ export function useTranslationSession(languages: LanguagePair) {
         throw new Error("Invalid source language");
       }
 
-      // Create recognition instance
       const recognition = new SpeechRecognition();
       recognitionRef.current = recognition;
 
-      // Configure recognition
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = sourceLang.speechRecognitionCode;
       recognition.maxAlternatives = 1;
 
-      // Handle results
       recognition.onresult = async (event: SpeechRecognitionResultEvent) => {
-        // Ignore events if recording has been stopped
         if (!isRecordingRef.current) {
           return;
         }
@@ -219,7 +203,6 @@ export function useTranslationSession(languages: LanguagePair) {
           }
         }
 
-        // Apply custom keywords to recognized text
         if (interimTranscript) {
           interimTranscript = applyKeywords(interimTranscript);
         }
@@ -227,12 +210,10 @@ export function useTranslationSession(languages: LanguagePair) {
           finalTranscript = applyKeywords(finalTranscript);
         }
 
-        // Handle interim results (partial transcript)
         if (interimTranscript) {
           currentTranscriptRef.current = interimTranscript;
 
           if (currentLogIdRef.current) {
-            // Update existing log item
             setLogs((prev) =>
               prev.map((log) =>
                 log.id === currentLogIdRef.current
@@ -241,7 +222,6 @@ export function useTranslationSession(languages: LanguagePair) {
               )
             );
           } else {
-            // Create new log item
             const newLogId = `log-${Date.now()}`;
             currentLogIdRef.current = newLogId;
             const newLog: LogItem = {
@@ -254,28 +234,23 @@ export function useTranslationSession(languages: LanguagePair) {
             setLogs((prev) => [...prev, newLog]);
           }
 
-          // Start translation with debounce (300ms)
           if (translationTimerRef.current) {
             clearTimeout(translationTimerRef.current);
           }
         }
 
-        // Handle final results
         if (finalTranscript) {
           const finalText = finalTranscript.trim();
 
           if (finalText) {
-            // Clear debounce timer
             if (translationTimerRef.current) {
               clearTimeout(translationTimerRef.current);
               translationTimerRef.current = null;
             }
 
-            // Save the current log ID before it changes
             const logIdToUpdate = currentLogIdRef.current;
 
             if (logIdToUpdate) {
-              // Update the log with final text and start final translation
               setLogs((prev) =>
                 prev.map((log) =>
                   log.id === logIdToUpdate
@@ -286,7 +261,6 @@ export function useTranslationSession(languages: LanguagePair) {
 
               startTranslation(finalText, logIdToUpdate);
 
-              // Reset current transcript for next input
               currentTranscriptRef.current = "";
               currentLogIdRef.current = null;
             }
@@ -321,7 +295,6 @@ export function useTranslationSession(languages: LanguagePair) {
       };
 
       recognition.onend = () => {
-        // If still recording, restart recognition
         if (isRecordingRef.current && recognitionRef.current) {
           try {
             recognitionRef.current.start();
@@ -335,7 +308,6 @@ export function useTranslationSession(languages: LanguagePair) {
         }
       };
 
-      // Start recognition
       recognition.start();
     } catch (error) {
       console.error("Failed to start recording:", error);
@@ -348,7 +320,6 @@ export function useTranslationSession(languages: LanguagePair) {
     }
   }, [languages.source, startTranslation]);
 
-  // Stop recording session
   const stopRecording = useCallback(() => {
     isRecordingRef.current = false;
 
@@ -357,13 +328,11 @@ export function useTranslationSession(languages: LanguagePair) {
       recognitionRef.current = null;
     }
 
-    // Clear debounce timer
     if (translationTimerRef.current) {
       clearTimeout(translationTimerRef.current);
       translationTimerRef.current = null;
     }
 
-    // Cancel ongoing translation
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
@@ -375,7 +344,6 @@ export function useTranslationSession(languages: LanguagePair) {
     setStatus("idle");
   }, []);
 
-  // Toggle recording
   const toggleRecording = useCallback(() => {
     if (isRecording) {
       stopRecording();
@@ -384,14 +352,12 @@ export function useTranslationSession(languages: LanguagePair) {
     }
   }, [isRecording, startRecording, stopRecording]);
 
-  // Reset logs
   const resetLogs = useCallback(() => {
     setLogs([]);
     currentTranscriptRef.current = "";
     currentLogIdRef.current = null;
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {

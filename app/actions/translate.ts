@@ -2,17 +2,12 @@
 
 import { Keyword } from "@/lib/types";
 
-/**
- * Translate text using OpenAI API with streaming
- */
 export async function translateTextStreaming(
   text: string,
   sourceLang: string,
   targetLang: string,
   keywords?: Keyword[]
 ): Promise<ReadableStream<Uint8Array>> {
-  console.log("[Server] translateTextStreaming called with:", { text, sourceLang, targetLang });
-
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
@@ -20,7 +15,6 @@ export async function translateTextStreaming(
   }
 
   if (!text.trim()) {
-    // Return empty stream
     return new ReadableStream({
       start(controller) {
         controller.close();
@@ -30,7 +24,6 @@ export async function translateTextStreaming(
 
   let systemPrompt = `Translate the following text from ${sourceLang} to ${targetLang}. Output ONLY the translated text, without any explanations or additional comments.`;
 
-  // Add custom keywords to the prompt if provided
   if (keywords && keywords.length > 0) {
     const keywordList = keywords
       .map((k) => `- "${k.term}" should be translated as "${k.translation}"`)
@@ -70,17 +63,12 @@ export async function translateTextStreaming(
   return response.body!;
 }
 
-/**
- * Translate text using OpenAI API (non-streaming, for backward compatibility)
- */
 export async function translateText(
   text: string,
   sourceLang: string,
   targetLang: string,
   keywords?: Keyword[]
 ): Promise<{ translatedText: string }> {
-  console.log("[Server] translateText called with:", { text, sourceLang, targetLang, keywords });
-
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
@@ -95,7 +83,6 @@ export async function translateText(
 
   let systemPrompt = `Translate the following text from ${sourceLang} to ${targetLang}. Output ONLY the translated text, without any explanations or additional comments.`;
 
-  // Add custom keywords to the prompt if provided
   if (keywords && keywords.length > 0) {
     const keywordList = keywords
       .map((k) => `- "${k.term}" should be translated as "${k.translation}"`)
@@ -106,7 +93,6 @@ export async function translateText(
   console.log("[Server] System prompt:", systemPrompt);
 
   try {
-    console.log("[Server] Sending request to OpenAI API...");
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -128,9 +114,6 @@ export async function translateText(
         temperature: 0.3,
       }),
     });
-
-    console.log("[Server] OpenAI API response status:", response.status);
-
     if (!response.ok) {
       const errorText = await response.text();
       console.error("[Server] OpenAI API error:", errorText);
@@ -138,10 +121,8 @@ export async function translateText(
     }
 
     const data = await response.json();
-    console.log("[Server] OpenAI API response data:", data);
     const translatedText = data.choices?.[0]?.message?.content?.trim() || "";
 
-    console.log("[Server] Translated text:", translatedText);
     return { translatedText };
   } catch (error) {
     console.error("[Server] Error translating text:", error);

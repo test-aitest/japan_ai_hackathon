@@ -40,7 +40,6 @@ export function TranslationLog({ logs }: TranslationLogProps) {
           >
             <div className="py-4 border-b last:border-b-0 border-border">
               <div className="space-y-3">
-                {/* Translated Text */}
                 <div className="flex items-start gap-3">
                   {!log.isFinal && (
                     <Loader2 className="w-4 h-4 mt-0.5 animate-spin text-muted-foreground shrink-0" />
@@ -58,7 +57,6 @@ export function TranslationLog({ logs }: TranslationLogProps) {
                   </div>
                 </div>
 
-                {/* Original Text */}
                 <div className="pl-0">
                   <p className="text-sm leading-relaxed text-muted-foreground">
                     {log.original}

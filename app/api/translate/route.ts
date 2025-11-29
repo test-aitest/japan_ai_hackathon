@@ -3,9 +3,6 @@ import { Keyword } from "@/lib/types";
 
 export const runtime = "edge";
 
-/**
- * POST /api/translate - Streaming translation endpoint
- */
 export async function POST(request: NextRequest) {
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -27,7 +24,6 @@ export async function POST(request: NextRequest) {
 
   let systemPrompt = `Translate the following text from ${sourceLang} to ${targetLang}. Output ONLY the translated text, without any explanations or additional comments.`;
 
-  // Add custom keywords to the prompt if provided
   if (keywords && keywords.length > 0) {
     const keywordList = keywords
       .map((k) => `- "${k.term}" should be translated as "${k.translation}"`)
@@ -68,7 +64,6 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Return the stream directly
   return new Response(response.body, {
     headers: {
       "Content-Type": "text/event-stream",
