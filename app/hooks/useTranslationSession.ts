@@ -149,12 +149,6 @@ export function useTranslationSession(languages: LanguagePair) {
 
         console.log("[Client] Streaming translation complete:", translatedText);
 
-        // Mark as final
-        setLogs((prev) =>
-          prev.map((log) =>
-            log.id === logId ? { ...log, isFinal: true } : log
-          )
-        );
         setStatus("listening");
       } catch (error: unknown) {
         if (error instanceof Error && error.name === "AbortError") {
@@ -207,6 +201,11 @@ export function useTranslationSession(languages: LanguagePair) {
 
       // Handle results
       recognition.onresult = async (event: SpeechRecognitionResultEvent) => {
+        // Ignore events if recording has been stopped
+        if (!isRecordingRef.current) {
+          return;
+        }
+
         let interimTranscript = "";
         let finalTranscript = "";
 
@@ -259,13 +258,6 @@ export function useTranslationSession(languages: LanguagePair) {
           if (translationTimerRef.current) {
             clearTimeout(translationTimerRef.current);
           }
-
-          const logId = currentLogIdRef.current;
-          translationTimerRef.current = setTimeout(() => {
-            if (logId) {
-              startTranslation(interimTranscript, logId);
-            }
-          }, 300);
         }
 
         // Handle final results
@@ -283,16 +275,15 @@ export function useTranslationSession(languages: LanguagePair) {
             const logIdToUpdate = currentLogIdRef.current;
 
             if (logIdToUpdate) {
-              // Update log with final original text
+              // Update the log with final text and start final translation
               setLogs((prev) =>
                 prev.map((log) =>
                   log.id === logIdToUpdate
-                    ? { ...log, original: finalText }
+                    ? { ...log, original: finalText, isFinal: true }
                     : log
                 )
               );
 
-              // Start final translation immediately
               startTranslation(finalText, logIdToUpdate);
 
               // Reset current transcript for next input
