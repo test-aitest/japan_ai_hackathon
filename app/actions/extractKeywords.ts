@@ -49,32 +49,14 @@ export async function extractKeywordsFromURL(
       return { keywords: [], error: "No text content found on the page" };
     }
 
-    const systemPrompt = "You are a helpful assistant that extracts proper nouns and technical terms from conference websites. You MUST always return a valid JSON object with a 'keywords' array. Extract as many relevant terms as possible (aim for 10-20+). Never return an empty array.";
+    const systemPrompt = "Extract keywords from text and return them as JSON.";
 
-    const extractionPrompt = `Analyze the following conference website content and extract important proper nouns and technical terms.
+    const extractionPrompt = `Extract speaker names, company names, product names, and technical terms from this text.
 
-Extract ALL of the following:
-- Speaker names (people presenting or organizing)
-- Company/organization names
-- Product or service names
-- Important session keywords or topics
-- Technical terms or jargon
-- Conference or event names
+Return JSON in this format:
+{"keywords":[{"term":"example","translation":"example","category":"speaker"}]}
 
-For each term, keep it in its original form (don't translate).
-
-You MUST return a JSON object with a "keywords" array containing at least 10-20 terms if available.
-
-Required JSON format:
-{
-  "keywords": [
-    {"term": "John Doe", "translation": "John Doe", "category": "speaker"},
-    {"term": "TechCorp", "translation": "TechCorp", "category": "company"},
-    {"term": "Machine Learning", "translation": "Machine Learning", "category": "technical"}
-  ]
-}
-
-Conference content:
+Text:
 ${text}`;
 
     // JAPAN AI Chat API v2仕様に基づく
@@ -91,7 +73,7 @@ ${text}`;
           prompt: extractionPrompt,
           systemPrompt: systemPrompt,
           model: "gpt-4o-mini",
-          temperature: 0.5,
+          temperature: 0.1,
           stream: false,
         }),
       }
@@ -107,16 +89,34 @@ ${text}`;
     }
 
     const data = await aiResponse.json();
+    console.log("AI Response data:", JSON.stringify(data, null, 2));
+
     // JAPAN AI APIのレスポンス形式: { status: "succeeded", chatMessage: "..." }
     const content = data.chatMessage;
 
     if (!content) {
+      console.error("No chatMessage in response:", data);
       return { keywords: [], error: "No content received from AI" };
     }
 
     let extractedKeywords: ExtractedKeyword[];
     try {
-      const parsed = JSON.parse(content);
+      // マークダウンコードブロックや余分なテキストを除去
+      let cleanedContent = content.trim();
+
+      // ```json ... ``` の形式を除去
+      const codeBlockMatch = cleanedContent.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+      if (codeBlockMatch) {
+        cleanedContent = codeBlockMatch[1];
+      }
+
+      // 最初の { から最後の } までを抽出
+      const jsonMatch = cleanedContent.match(/(\{[\s\S]*\})/);
+      if (jsonMatch) {
+        cleanedContent = jsonMatch[1];
+      }
+
+      const parsed = JSON.parse(cleanedContent);
       console.log("Parsed JSON:", parsed);
 
       extractedKeywords = Array.isArray(parsed)

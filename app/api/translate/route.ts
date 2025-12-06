@@ -27,7 +27,16 @@ export async function POST(request: NextRequest) {
     return new Response("", { status: 200 });
   }
 
-  let systemPrompt = `You are a translator. Translate the input text from ${sourceLang} to ${targetLang}. Return ONLY the translated text itself, with no additional explanations, comments, notes, or formatting. Do not include phrases like "Here is the translation:" or any other preamble.`;
+  let systemPrompt = `You are a translator. Translate from ${sourceLang} to ${targetLang}.
+
+Example:
+Input: "Hello, how are you?"
+Output: "こんにちは、お元気ですか?"
+
+Input: "The weather is nice today."
+Output: "今日は天気がいいですね。"
+
+Only output the translated text. Do not add summaries, findings, analysis, or explanations.`;
 
   if (keywords && keywords.length > 0) {
     const keywordList = keywords
@@ -47,10 +56,10 @@ export async function POST(request: NextRequest) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      prompt: text,
+      prompt: `Translate this to ${targetLang}:\n\n${text}`,
       systemPrompt: systemPrompt,
       model: "gpt-4o-mini",
-      temperature: 0.3,
+      temperature: 0.1,
       stream: true,
       agentName: "",
     }),
