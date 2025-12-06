@@ -106,24 +106,29 @@ export function useTranslationSession(languages: LanguagePair) {
 
         const decoder = new TextDecoder();
         let translatedText = "";
+        let buffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+
+          // 最後の行は不完全な可能性があるので保持
+          buffer = lines.pop() || "";
 
           for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6);
-              if (data === "[DONE]") continue;
-
+            console.log("[Client] Received line:", line);
+            if (line.trim() && line.startsWith("data: ")) {
+              const jsonStr = line.slice(6); // "data: " を除去
               try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
-                if (content) {
-                  translatedText += content;
+                const parsed = JSON.parse(jsonStr);
+                console.log("[Client] Parsed data:", parsed);
+                // JAPAN AI APIのストリーミング形式: type="delta", delta.text にテキストが含まれる
+                if (parsed.type === "delta" && parsed.delta?.type === "text" && parsed.delta?.text) {
+                  translatedText += parsed.delta.text;
+                  console.log("[Client] Updated translation:", translatedText);
                   setLogs((prev) =>
                     prev.map((log) =>
                       log.id === logId
@@ -132,10 +137,31 @@ export function useTranslationSession(languages: LanguagePair) {
                     )
                   );
                 }
-              } catch {
-                // Skip invalid JSON
+              } catch (e) {
+                console.error("[Client] JSON parse error:", e, "Line:", line);
               }
             }
+          }
+        }
+
+        // バッファに残っているデータを処理
+        if (buffer.trim() && buffer.startsWith("data: ")) {
+          const jsonStr = buffer.slice(6); // "data: " を除去
+          try {
+            const parsed = JSON.parse(jsonStr);
+            console.log("[Client] Final parsed data:", parsed);
+            if (parsed.type === "delta" && parsed.delta?.type === "text" && parsed.delta?.text) {
+              translatedText += parsed.delta.text;
+              setLogs((prev) =>
+                prev.map((log) =>
+                  log.id === logId
+                    ? { ...log, translated: translatedText }
+                    : log
+                )
+              );
+            }
+          } catch (e) {
+            console.error("[Client] Final JSON parse error:", e, "Buffer:", buffer);
           }
         }
 

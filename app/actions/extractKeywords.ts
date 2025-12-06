@@ -13,10 +13,10 @@ export async function extractKeywordsFromURL(
   sourceLang: string,
   targetLang: string
 ): Promise<{ keywords: Omit<Keyword, "id">[]; error?: string }> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.JAPAN_AI_STUDIO_API_KEY;
 
   if (!apiKey) {
-    return { keywords: [], error: "OPENAI_API_KEY is not configured" };
+    return { keywords: [], error: "JAPAN_AI_STUDIO_API_KEY is not configured" };
   }
 
   try {
@@ -49,6 +49,8 @@ export async function extractKeywordsFromURL(
       return { keywords: [], error: "No text content found on the page" };
     }
 
+    const systemPrompt = "You are a helpful assistant that extracts proper nouns and technical terms from conference websites. You MUST always return a valid JSON object with a 'keywords' array. Extract as many relevant terms as possible (aim for 10-20+). Never return an empty array.";
+
     const extractionPrompt = `Analyze the following conference website content and extract important proper nouns and technical terms.
 
 Extract ALL of the following:
@@ -75,8 +77,10 @@ Required JSON format:
 Conference content:
 ${text}`;
 
+    // JAPAN AI Chat API v2仕様に基づく
+    // 参照: https://api.japan-ai.co.jp/chat/v2
     const aiResponse = await fetch(
-      "https://api.openai.com/v1/chat/completions",
+      "https://api.japan-ai.co.jp/chat/v2",
       {
         method: "POST",
         headers: {
@@ -84,27 +88,18 @@ ${text}`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          prompt: extractionPrompt,
+          systemPrompt: systemPrompt,
           model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a helpful assistant that extracts proper nouns and technical terms from conference websites. You MUST always return a valid JSON object with a 'keywords' array. Extract as many relevant terms as possible (aim for 10-20+). Never return an empty array.",
-            },
-            {
-              role: "user",
-              content: extractionPrompt,
-            },
-          ],
           temperature: 0.5,
-          response_format: { type: "json_object" },
+          stream: false,
         }),
       }
     );
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error("OpenAI API error:", errorText);
+      console.error("JAPAN AI API error:", errorText);
       return {
         keywords: [],
         error: `AI extraction failed: ${aiResponse.statusText}`,
@@ -112,7 +107,8 @@ ${text}`;
     }
 
     const data = await aiResponse.json();
-    const content = data.choices?.[0]?.message?.content;
+    // JAPAN AI APIのレスポンス形式: { status: "succeeded", chatMessage: "..." }
+    const content = data.chatMessage;
 
     if (!content) {
       return { keywords: [], error: "No content received from AI" };
