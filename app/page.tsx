@@ -28,7 +28,7 @@ export default function Home() {
       {/* Header with Language Selection */}
       <div className="px-6 py-3 border-b">
         <div className="flex items-center justify-between max-w-full">
-          <h1 className="text-2xl font-bold tracking-tight">Hanasu</h1>
+          <h1 className="text-2xl font-bold tracking-tight">ConferSense AI</h1>
           <div className="flex items-center gap-3">
             <RecordingButton
               isRecording={isRecording}
