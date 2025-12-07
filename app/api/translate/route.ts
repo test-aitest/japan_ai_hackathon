@@ -61,7 +61,7 @@ Only output the translated text. Do not add summaries, findings, analysis, or ex
       model: "gpt-4o-mini",
       temperature: 0.1,
       stream: true,
-      agentName: "",
+      agentName: "4f71d829-1a5a-47c9-aeb5-6a317a690fe5",
     }),
   });
 

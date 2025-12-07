@@ -122,6 +122,13 @@ export function useTranslationSession(languages: LanguagePair) {
             console.log("[Client] Received line:", line);
             if (line.trim() && line.startsWith("data: ")) {
               const jsonStr = line.slice(6); // "data: " を除去
+
+              // [DONE] シグナルをスキップ
+              if (jsonStr.trim() === "[DONE]") {
+                console.log("[Client] Stream done");
+                continue;
+              }
+
               try {
                 const parsed = JSON.parse(jsonStr);
                 console.log("[Client] Parsed data:", parsed);
@@ -147,21 +154,25 @@ export function useTranslationSession(languages: LanguagePair) {
         // バッファに残っているデータを処理
         if (buffer.trim() && buffer.startsWith("data: ")) {
           const jsonStr = buffer.slice(6); // "data: " を除去
-          try {
-            const parsed = JSON.parse(jsonStr);
-            console.log("[Client] Final parsed data:", parsed);
-            if (parsed.type === "delta" && parsed.delta?.type === "text" && parsed.delta?.text) {
-              translatedText += parsed.delta.text;
-              setLogs((prev) =>
-                prev.map((log) =>
-                  log.id === logId
-                    ? { ...log, translated: translatedText }
-                    : log
-                )
-              );
+
+          // [DONE] シグナルをスキップ
+          if (jsonStr.trim() !== "[DONE]") {
+            try {
+              const parsed = JSON.parse(jsonStr);
+              console.log("[Client] Final parsed data:", parsed);
+              if (parsed.type === "delta" && parsed.delta?.type === "text" && parsed.delta?.text) {
+                translatedText += parsed.delta.text;
+                setLogs((prev) =>
+                  prev.map((log) =>
+                    log.id === logId
+                      ? { ...log, translated: translatedText }
+                      : log
+                  )
+                );
+              }
+            } catch (e) {
+              console.error("[Client] Final JSON parse error:", e, "Buffer:", buffer);
             }
-          } catch (e) {
-            console.error("[Client] Final JSON parse error:", e, "Buffer:", buffer);
           }
         }
 
