@@ -37,7 +37,7 @@ export function QuestionGenerator({
     const translatedText = getTranslatedText();
 
     if (!translatedText.trim()) {
-      setError("翻訳されたテキストがありません。先に録音してください。");
+      setError("No translated text available. Please record first.");
       return;
     }
 
@@ -127,7 +127,7 @@ export function QuestionGenerator({
         }
       }
     } catch (err) {
-      setError("質問生成に失敗しました");
+      setError("Failed to generate question");
       console.error(err);
     } finally {
       setLoading(false);
@@ -138,16 +138,16 @@ export function QuestionGenerator({
 
   return (
     <Card className="p-4">
-      <h2 className="text-lg font-bold mb-3">質問を生成</h2>
+      <h2 className="text-lg font-bold mb-3">Generate Question</h2>
       <p className="text-xs text-muted-foreground mb-4">
-        録音停止後、翻訳されたテキストとカンファレンスURLをもとに質問を生成します。
+        Generate questions based on translated text and conference URL after stopping the recording.
       </p>
 
       <div className="space-y-4">
         {/* カンファレンスURL入力 */}
         <div>
           <label className="text-sm font-medium mb-2 block">
-            カンファレンスURL（オプション）
+            Conference URL (Optional)
           </label>
           <div className="flex gap-2">
             <div className="flex-1 relative">
@@ -166,10 +166,10 @@ export function QuestionGenerator({
         {/* 翻訳済みテキストプレビュー */}
         <div>
           <label className="text-sm font-medium mb-2 block">
-            翻訳済みテキスト
+            Translated Text
           </label>
           <div className="max-h-32 overflow-y-auto p-3 bg-muted/50 rounded-md border text-sm">
-            {translatedText || "まだ翻訳されたテキストがありません"}
+            {translatedText || "No translated text yet"}
           </div>
         </div>
 
@@ -182,12 +182,12 @@ export function QuestionGenerator({
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              質問を生成中...
+              Generating question...
             </>
           ) : (
             <>
               <MessageSquarePlus className="w-4 h-4 mr-2" />
-              質問を生成
+              Generate Question
             </>
           )}
         </Button>
@@ -203,7 +203,7 @@ export function QuestionGenerator({
         {generatedQuestion && (
           <div>
             <label className="text-sm font-medium mb-2 block">
-              生成された質問
+              Generated Question
             </label>
             <div className="max-h-64 overflow-y-auto p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
               <p className="text-sm whitespace-pre-wrap">{generatedQuestion}</p>
