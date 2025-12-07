@@ -9,6 +9,7 @@ import { LanguageSelector } from "@/components/translator/LanguageSelector";
 import { TranslationLog } from "@/components/translator/TranslationLog";
 import { RecordingButton } from "@/components/translator/RecordingButton";
 import { KeywordSettings } from "@/components/translator/KeywordSettings";
+import { QuestionGenerator } from "@/components/translator/QuestionGenerator";
 import { useTranslationSession } from "@/app/hooks/useTranslationSession";
 import { RotateCcw } from "lucide-react";
 
@@ -57,12 +58,25 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Translation Log - Full Screen */}
-      <div className="flex-1 flex flex-col min-h-0 px-6 py-4">
-        <h2 className="text-sm font-medium mb-2">Translations</h2>
-        <Card className="flex-1 overflow-hidden">
-          <TranslationLog logs={logs} />
-        </Card>
+      {/* Main Content - Two Columns */}
+      <div className="flex-1 flex gap-4 min-h-0 px-6 py-4">
+        {/* Left Column - Translation Log */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <h2 className="text-sm font-medium mb-2">Translations</h2>
+          <Card className="flex-1 overflow-hidden">
+            <TranslationLog logs={logs} />
+          </Card>
+        </div>
+
+        {/* Right Column - Question Generator */}
+        <div className="w-96 flex flex-col min-h-0">
+          <QuestionGenerator
+            logs={logs}
+            isRecording={isRecording}
+            sourceLang={sourceLang}
+            targetLang={targetLang}
+          />
+        </div>
       </div>
     </div>
   );
